@@ -10,6 +10,10 @@ import (
 )
 
 func main() {
+	// This plugin must use vault's logger instead of printing to stdout
+	// See: https://github.com/ScaleSec/scalesec-secret-store/blob/main/plugin/main.go
+	hclog.Default().Info("starting kv-rotate plugin")
+
 	apiClientMeta := &api.PluginAPIClientMeta{}
 	flags := apiClientMeta.FlagSet()
 	flags.Parse(os.Args[1:])
@@ -24,7 +28,7 @@ func main() {
 	if err != nil {
 		logger := hclog.New(&hclog.LoggerOptions{})
 
-		logger.Error("plugin shutting down", "error", err)
+		logger.Error("kv-rotate plugin shutting down", "error", err)
 		os.Exit(1)
 	}
 }

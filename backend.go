@@ -44,10 +44,7 @@ func makeBackend() *kvRotateBackend {
 		},
 		Paths: framework.PathAppend(
 			pathRole(&b),
-			[]*framework.Path{
-				pathConfig(&b),
-				pathCredentials(&b),
-			},
+			pathConfig(&b),
 		),
 		Secrets:     []*framework.Secret{},
 		BackendType: logical.TypeLogical,

@@ -27,55 +27,57 @@ type hashiCupsConfig struct {
 // required, and named. For example, password
 // is marked as sensitive and will not be output
 // when you read the configuration.
-func pathConfig(b *kvRotateBackend) *framework.Path {
-	return &framework.Path{
-		Pattern: "config",
-		Fields: map[string]*framework.FieldSchema{
-			"username": {
-				Type:        framework.TypeString,
-				Description: "The username to access HashiCups Product API",
-				Required:    true,
-				DisplayAttrs: &framework.DisplayAttributes{
-					Name:      "Username",
-					Sensitive: false,
+func pathConfig(b *kvRotateBackend) []*framework.Path {
+	return []*framework.Path{
+		{
+			Pattern: "config",
+			Fields: map[string]*framework.FieldSchema{
+				"username": {
+					Type:        framework.TypeString,
+					Description: "The username to access HashiCups Product API",
+					Required:    true,
+					DisplayAttrs: &framework.DisplayAttributes{
+						Name:      "Username",
+						Sensitive: false,
+					},
+				},
+				"password": {
+					Type:        framework.TypeString,
+					Description: "The user's password to access HashiCups Product API",
+					Required:    true,
+					DisplayAttrs: &framework.DisplayAttributes{
+						Name:      "Password",
+						Sensitive: true,
+					},
+				},
+				"url": {
+					Type:        framework.TypeString,
+					Description: "The URL for the HashiCups Product API",
+					Required:    true,
+					DisplayAttrs: &framework.DisplayAttributes{
+						Name:      "URL",
+						Sensitive: false,
+					},
 				},
 			},
-			"password": {
-				Type:        framework.TypeString,
-				Description: "The user's password to access HashiCups Product API",
-				Required:    true,
-				DisplayAttrs: &framework.DisplayAttributes{
-					Name:      "Password",
-					Sensitive: true,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.pathConfigRead,
+				},
+				logical.CreateOperation: &framework.PathOperation{
+					Callback: b.pathConfigWrite,
+				},
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.pathConfigWrite,
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: b.pathConfigDelete,
 				},
 			},
-			"url": {
-				Type:        framework.TypeString,
-				Description: "The URL for the HashiCups Product API",
-				Required:    true,
-				DisplayAttrs: &framework.DisplayAttributes{
-					Name:      "URL",
-					Sensitive: false,
-				},
-			},
+			ExistenceCheck:  b.pathConfigExistenceCheck,
+			HelpSynopsis:    pathConfigHelpSynopsis,
+			HelpDescription: pathConfigHelpDescription,
 		},
-		Operations: map[logical.Operation]framework.OperationHandler{
-			logical.ReadOperation: &framework.PathOperation{
-				Callback: b.pathConfigRead,
-			},
-			logical.CreateOperation: &framework.PathOperation{
-				Callback: b.pathConfigWrite,
-			},
-			logical.UpdateOperation: &framework.PathOperation{
-				Callback: b.pathConfigWrite,
-			},
-			logical.DeleteOperation: &framework.PathOperation{
-				Callback: b.pathConfigDelete,
-			},
-		},
-		ExistenceCheck:  b.pathConfigExistenceCheck,
-		HelpSynopsis:    pathConfigHelpSynopsis,
-		HelpDescription: pathConfigHelpDescription,
 	}
 }
 

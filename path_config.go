@@ -1,4 +1,4 @@
-package secretsengine
+package vault_plugin_kv_rotate
 
 import (
 	"context"

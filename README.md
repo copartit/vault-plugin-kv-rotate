@@ -1,15 +1,15 @@
-# vault-plugin-secrets-hashicups
+# vault-plugin-kv-rotate
 
-This secrets engine renews and revokes JSON Web Tokens (JWTs)
-for the HashiCorp demo application. It is shared here as
-supporting content for the [Define Roles for the Secrets Engine](https://developer.hashicorp.com/vault/tutorials/custom-secrets-engine/custom-secrets-engine-role) tutorial.
+This secrets engine rotates KV secrets periodically using configured endpoints.
+
+This was initially copied from https://github.com/hashicorp-education/learn-vault-plugin-secrets-hashicups
+
+TODO: update the rest of this README
+
 ## Prerequisites
 
-1. Target API with CRUD capabilities for secrets.
-1. Golang 1.16+
-1. Docker &  Docker Compose 20.10+
-1. Terraform 1.0+
-1. Google Cloud Platform
+1. Target API that regenerates secrets.
+1. Golang 1.22+
 
 ## Install
 
@@ -29,49 +29,6 @@ supporting content for the [Define Roles for the Secrets Engine](https://develop
    ```shell
    $ vault server -dev -dev-root-token-id=root -dev-plugin-dir=./vault/plugins
    ```
-
-## Start the HashiCorp Demo Application
-
-The [HashiCorp Demo Application](https://github.com/hashicorp-demoapp)
-includes a set of services that run
-an online coffee store. In this demo, we use two of these services:
-
-- A products database, which stores information about coffee and
-  user logins.
-- A products API, which returns information about coffee, ingredients,
-  and handles user logins.
-
-1. Go to the `terraform` directory. It includes configuration files
-   to create a Kubernetes cluster.
-   ```shell
-   cd terraform && terraform init && terraform apply
-   ```
-
-1. Start the HashiCorp Demo Application in Kubernetes.
-   ```shell
-   kubectl apply -f kubernetes/
-   ```
-
-1. You should have started two containers.
-   ```shell
-   $ kubectl get deployments
-
-   NAME          READY   UP-TO-DATE   AVAILABLE   AGE
-   postgres      1/1     1            1           91s
-   product-api   1/1     1            1           90s
-   ```
-
-You can access the products API
-on `http://$(kubectl get service product-api  -o jsonpath="{.status.loadBalancer.ingress[*].ip}"):9090`.
-
-We'll be using specific API endpoints related to user
-logins in the [products API](https://github.com/hashicorp-demoapp/product-api-go).
-
-| PATH | METHOD | DESCRIPTION | HEADER | REQUEST | RESPONSE |
-| ----------- | ----------- | ----------- | ----------- | ----------- | ----------- |
-| /signup | POST | Create a new user with a password. | | `{"username": "user", "password": "pass"}` | `{"UserID":1,"Username":"user","token":"<JWT>"}` |
-| /signin | POST | Sign in an existing user and return an API token in the form of a JWT | | `{"username": "user", "password": "pass"}` | `{"UserID":1,"Username":"user","token":"<JWT>"}` |
-| /signout | POST | Sign out a user based on their API token | `Authorization:<JWT>` | | `Signed out user` |
 
 ## Additional references:
 

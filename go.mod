@@ -1,6 +1,6 @@
-module github.com/hashicorp/vault-guides/plugins/vault-plugin-secrets-hashicups
+module github.com/copartit/vault-plugin-kv-rotate
 
-go 1.16
+go 1.22
 
 require (
 	github.com/hashicorp-demoapp/hashicups-client-go v0.0.0-20210721190446-1df90c457bd4

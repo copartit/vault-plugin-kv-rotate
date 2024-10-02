@@ -24,7 +24,7 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 type kvRotateBackend struct {
 	*framework.Backend
 	lock   sync.RWMutex
-	client *hashiCupsClient
+	client *httpClient
 }
 
 // makeBackend defines the target API backend
@@ -49,9 +49,7 @@ func makeBackend() *kvRotateBackend {
 				pathCredentials(&b),
 			},
 		),
-		Secrets: []*framework.Secret{
-			b.hashiCupsToken(),
-		},
+		Secrets:     []*framework.Secret{},
 		BackendType: logical.TypeLogical,
 		Invalidate:  b.invalidate,
 	}
@@ -76,7 +74,7 @@ func (b *kvRotateBackend) invalidate(ctx context.Context, key string) {
 
 // getClient locks the backend as it configures and creates a
 // a new client for the target API
-func (b *kvRotateBackend) getClient(ctx context.Context, s logical.Storage) (*hashiCupsClient, error) {
+func (b *kvRotateBackend) getClient(ctx context.Context, s logical.Storage) (*httpClient, error) {
 	b.lock.RLock()
 	unlockFunc := b.lock.RUnlock
 	defer func() { unlockFunc() }()

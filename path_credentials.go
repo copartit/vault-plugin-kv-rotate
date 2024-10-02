@@ -82,21 +82,21 @@ func (b *kvRotateBackend) createUserCreds(ctx context.Context, req *logical.Requ
 
 // createToken uses the HashiCups client to sign in and get a new token
 func (b *kvRotateBackend) createToken(ctx context.Context, s logical.Storage, roleEntry *hashiCupsRoleEntry) (*hashiCupsToken, error) {
-	client, err := b.getClient(ctx, s)
+	_, err := b.getClient(ctx, s)
 	if err != nil {
 		return nil, err
 	}
 
 	var token *hashiCupsToken
 
-	token, err = createToken(ctx, client, roleEntry.Username)
-	if err != nil {
-		return nil, fmt.Errorf("error creating HashiCups token: %w", err)
-	}
+	//token, err = createToken(ctx, client, roleEntry.Username)
+	//if err != nil {
+	//	return nil, fmt.Errorf("error creating HashiCups token: %w", err)
+	//}
 
-	if token == nil {
-		return nil, errors.New("error creating HashiCups token")
-	}
+	//if token == nil {
+	//	return nil, errors.New("error creating HashiCups token")
+	//}
 
 	return token, nil
 }

@@ -2,38 +2,43 @@ package vault_plugin_kv_rotate
 
 import (
 	"errors"
-
-	hashicups "github.com/hashicorp-demoapp/hashicups-client-go"
+	"net/http"
+	"time"
 )
 
-// hashiCupsClient creates an object storing
+// httpClient creates an object storing
 // the client.
-type hashiCupsClient struct {
-	*hashicups.Client
+type httpClient struct {
+	*http.Client
 }
 
 // newClient creates a new client to access HashiCups
 // and exposes it for any secrets or roles to use.
-func newClient(config *hashiCupsConfig) (*hashiCupsClient, error) {
+func newClient(config *hashiCupsConfig) (*httpClient, error) {
 	if config == nil {
 		return nil, errors.New("client configuration was nil")
 	}
 
-	if config.Username == "" {
-		return nil, errors.New("client username was not defined")
-	}
+	//if config.??? == "" {
+	//	return nil, errors.New("client ??? was not defined")
+	//}
 
-	if config.Password == "" {
-		return nil, errors.New("client password was not defined")
+	tr := &http.Transport{
+		//Proxy: http.ProxyFromEnvironment,
+		//Proxy: http.ProxyURL(someProxyUrl),
+		MaxIdleConns:        100, // default unlimited
+		MaxIdleConnsPerHost: 2,   // default 2
+		MaxConnsPerHost:     10,  // default unlimited
+		IdleConnTimeout:     30 * time.Second,
+		//ResponseHeaderTimeout: , // default unlimited
+		//ExpectContinueTimeout: , // default unlimited
+		//WriteBufferSize: , // default 4KB
+		//ReadBufferSize: ,  // default 4KB
 	}
-
-	if config.URL == "" {
-		return nil, errors.New("client URL was not defined")
+	c := &http.Client{
+		Transport:     tr,
+		CheckRedirect: nil, // nil == use the default: follow up to 10 redirects
+		//Timeout: , // global limit for connecting, redirecting, and reading response body.
 	}
-
-	c, err := hashicups.NewClient(&config.URL, &config.Username, &config.Password)
-	if err != nil {
-		return nil, err
-	}
-	return &hashiCupsClient{c}, nil
+	return &httpClient{c}, nil
 }

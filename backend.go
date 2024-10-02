@@ -58,6 +58,7 @@ func makeBackend() *kvRotateBackend {
 func (b *kvRotateBackend) reset() {
 	b.lock.Lock()
 	defer b.lock.Unlock()
+	b.client.CloseIdleConnections()
 	b.client = nil
 }
 
@@ -90,7 +91,7 @@ func (b *kvRotateBackend) getClient(ctx context.Context, s logical.Storage) (*ht
 	}
 
 	if config == nil {
-		config = new(hashiCupsConfig)
+		config = new(httpClientConfig)
 	}
 
 	b.client, err = newClient(config)
@@ -103,7 +104,9 @@ func (b *kvRotateBackend) getClient(ctx context.Context, s logical.Storage) (*ht
 
 // backendHelp should contain help information for the backend
 const backendHelp = `
-The HashiCups secrets backend dynamically generates user tokens.
-After mounting this backend, credentials to manage HashiCups user tokens
-must be configured with the "config/" endpoints.
+The KV Rotate backend rotates configured KV2 secrets using HTTP endpoints.
+After mounting this backend, default HTTP client settings can be configured
+with the "config/" endpoints. Then, add an entry for secret that should be
+rotated, including the HTTP endpoint that will return a new secret, and any
+credentials or HTTP headers required to call that endpoint.
 `

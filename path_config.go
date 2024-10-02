@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -13,12 +14,13 @@ const (
 	configStoragePath = "config"
 )
 
-// hashiCupsConfig includes the minimum configuration
-// required to instantiate a new HashiCups client.
-type hashiCupsConfig struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-	URL      string `json:"url"`
+// httpClientConfig includes the minimum configuration
+// required to instantiate a new HTTP client.
+type httpClientConfig struct {
+	MaxIdleConns        int           `json:"max_idle_conns,omitempty"`
+	MaxIdleConnsPerHost int           `json:"max_idle_conns_per_host,omitempty"`
+	MaxConnsPerHost     int           `json:"max_conns_per_host,omitempty"`
+	IdleConnTimeout     time.Duration `json:"idle_timeout,omitempty"`
 }
 
 // pathConfig extends the Vault API with a `/config`
@@ -32,30 +34,43 @@ func pathConfig(b *kvRotateBackend) []*framework.Path {
 		{
 			Pattern: "config",
 			Fields: map[string]*framework.FieldSchema{
-				"username": {
-					Type:        framework.TypeString,
-					Description: "The username to access HashiCups Product API",
-					Required:    true,
+				"max_idle_conns": {
+					Type:        framework.TypeInt,
+					Description: "Maximum idle (keep-alive) connections across all hosts",
+					Required:    false,
+					Default:     100, // go http.Transport default is unlimited
 					DisplayAttrs: &framework.DisplayAttributes{
-						Name:      "Username",
+						Name:      "MaxIdleConns",
 						Sensitive: false,
 					},
 				},
-				"password": {
-					Type:        framework.TypeString,
-					Description: "The user's password to access HashiCups Product API",
-					Required:    true,
+				"max_idle_conns_per_host": {
+					Type:        framework.TypeInt,
+					Description: "Maximum idle (keep-alive) to keep per-host",
+					Required:    false,
+					Default:     2, // go http.Transport default is 2
 					DisplayAttrs: &framework.DisplayAttributes{
-						Name:      "Password",
+						Name:      "MaxIdleConnsPerHost",
 						Sensitive: true,
 					},
 				},
-				"url": {
-					Type:        framework.TypeString,
-					Description: "The URL for the HashiCups Product API",
-					Required:    true,
+				"max_conns_per_host": {
+					Type:        framework.TypeInt,
+					Description: "Limits number of connections per host (dialing, active, idle)",
+					Required:    false,
+					Default:     10, // go http.Transport default is unlimited
 					DisplayAttrs: &framework.DisplayAttributes{
-						Name:      "URL",
+						Name:      "MaxConnsPerHost",
+						Sensitive: false,
+					},
+				},
+				"idle_conn_timeout": {
+					Type:        framework.TypeDurationSecond,
+					Description: "Maximum time (in seconds) an idle (keep-alive) connection may remain idle",
+					Required:    false,
+					Default:     30, // go http.Transport default is unlimited
+					DisplayAttrs: &framework.DisplayAttributes{
+						Name:      "IdleConnTimeout",
 						Sensitive: false,
 					},
 				},
@@ -100,8 +115,10 @@ func (b *kvRotateBackend) pathConfigRead(ctx context.Context, req *logical.Reque
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"username": config.Username,
-			"url":      config.URL,
+			"max_idle_conns":          config.MaxIdleConns,
+			"max_idle_conns_per_host": config.MaxIdleConnsPerHost,
+			"max_conns_per_host":      config.MaxConnsPerHost,
+			"idle_conn_timeout":       int(config.IdleConnTimeout),
 		},
 	}, nil
 }
@@ -119,25 +136,23 @@ func (b *kvRotateBackend) pathConfigWrite(ctx context.Context, req *logical.Requ
 		if !createOperation {
 			return nil, errors.New("config not found during update operation")
 		}
-		config = new(hashiCupsConfig)
+		config = new(httpClientConfig)
 	}
 
-	if username, ok := data.GetOk("username"); ok {
-		config.Username = username.(string)
-	} else if !ok && createOperation {
-		return nil, fmt.Errorf("missing username in configuration")
+	if maxIdleConns, ok := data.GetOk("max_idle_conns"); ok {
+		config.MaxIdleConns = maxIdleConns.(int)
 	}
 
-	if url, ok := data.GetOk("url"); ok {
-		config.URL = url.(string)
-	} else if !ok && createOperation {
-		return nil, fmt.Errorf("missing url in configuration")
+	if maxIdleConnsPerHost, ok := data.GetOk("max_idle_conns_per_host"); ok {
+		config.MaxIdleConnsPerHost = maxIdleConnsPerHost.(int)
 	}
 
-	if password, ok := data.GetOk("password"); ok {
-		config.Password = password.(string)
-	} else if !ok && createOperation {
-		return nil, fmt.Errorf("missing password in configuration")
+	if maxConnsPerHost, ok := data.GetOk("max_conns_per_host"); ok {
+		config.MaxConnsPerHost = maxConnsPerHost.(int)
+	}
+
+	if idleConnTimeout, ok := data.GetOk("idle_conn_timeout"); ok {
+		config.IdleConnTimeout = time.Duration(idleConnTimeout.(int)) * time.Second
 	}
 
 	entry, err := logical.StorageEntryJSON(configStoragePath, config)
@@ -166,7 +181,7 @@ func (b *kvRotateBackend) pathConfigDelete(ctx context.Context, req *logical.Req
 	return nil, err
 }
 
-func getConfig(ctx context.Context, s logical.Storage) (*hashiCupsConfig, error) {
+func getConfig(ctx context.Context, s logical.Storage) (*httpClientConfig, error) {
 	entry, err := s.Get(ctx, configStoragePath)
 	if err != nil {
 		return nil, err
@@ -176,7 +191,7 @@ func getConfig(ctx context.Context, s logical.Storage) (*hashiCupsConfig, error)
 		return nil, nil
 	}
 
-	config := new(hashiCupsConfig)
+	config := new(httpClientConfig)
 	if err := entry.DecodeJSON(&config); err != nil {
 		return nil, fmt.Errorf("error reading root configuration: %w", err)
 	}
@@ -186,14 +201,11 @@ func getConfig(ctx context.Context, s logical.Storage) (*hashiCupsConfig, error)
 }
 
 // pathConfigHelpSynopsis summarizes the help text for the configuration
-const pathConfigHelpSynopsis = `Configure the HashiCups backend.`
+const pathConfigHelpSynopsis = `Configure the KV Rotate backend's HTTP client'.`
 
 // pathConfigHelpDescription describes the help text for the configuration
 const pathConfigHelpDescription = `
-The HashiCups secret backend requires credentials for managing
-JWTs issued to users working with the products API.
-
-You must sign up with a username and password and
-specify the HashiCups address for the products API
-before using this secrets backend.
+The KV Rotate backend pulls default HTTP Client
+settings from the config. This affects connections
+to all endpoints for all configured secrets.
 `

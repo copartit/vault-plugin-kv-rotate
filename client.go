@@ -14,22 +14,34 @@ type httpClient struct {
 
 // newClient creates a new client to access HashiCups
 // and exposes it for any secrets or roles to use.
-func newClient(config *hashiCupsConfig) (*httpClient, error) {
+func newClient(config *httpClientConfig) (*httpClient, error) {
 	if config == nil {
 		return nil, errors.New("client configuration was nil")
 	}
 
-	//if config.??? == "" {
-	//	return nil, errors.New("client ??? was not defined")
-	//}
+	if config.MaxIdleConns == 0 {
+		return nil, errors.New("client MaxIdleConns was not defined")
+	}
+
+	if config.MaxIdleConnsPerHost == 0 {
+		return nil, errors.New("client MaxIdleConnsPerHost was not defined")
+	}
+
+	if config.MaxIdleConnsPerHost == 0 {
+		return nil, errors.New("client MaxConnsPerHost was not defined")
+	}
+
+	if config.IdleConnTimeout == 0*time.Second {
+		return nil, errors.New("client IdleTimeout was not defined")
+	}
 
 	tr := &http.Transport{
 		//Proxy: http.ProxyFromEnvironment,
 		//Proxy: http.ProxyURL(someProxyUrl),
-		MaxIdleConns:        100, // default unlimited
-		MaxIdleConnsPerHost: 2,   // default 2
-		MaxConnsPerHost:     10,  // default unlimited
-		IdleConnTimeout:     30 * time.Second,
+		MaxIdleConns:        config.MaxIdleConns,
+		MaxIdleConnsPerHost: config.MaxIdleConnsPerHost,
+		MaxConnsPerHost:     config.MaxConnsPerHost,
+		IdleConnTimeout:     config.IdleConnTimeout,
 		//ResponseHeaderTimeout: , // default unlimited
 		//ExpectContinueTimeout: , // default unlimited
 		//WriteBufferSize: , // default 4KB
